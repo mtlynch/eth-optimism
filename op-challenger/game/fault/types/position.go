@@ -19,12 +19,21 @@ type Position struct {
 }
 
 func NewPosition(depth int, indexAtDepth *big.Int) Position {
+	if indexAtDepth == nil {
+		panic("can't be null")
+	}
 	return Position{
 		depth:        depth,
 		indexAtDepth: indexAtDepth,
 	}
 }
 
+// NewPositionFromGIndex creates a new Position given a graph index, numbered
+// like the following:
+//
+//	    0
+//	 1     2
+//	3 4   5 6
 func NewPositionFromGIndex(x *big.Int) Position {
 	depth := bigMSB(x)
 	withoutMSB := new(big.Int).Not(new(big.Int).Lsh(big.NewInt(1), uint(depth)))
@@ -33,7 +42,11 @@ func NewPositionFromGIndex(x *big.Int) Position {
 }
 
 func (p Position) String() string {
-	return fmt.Sprintf("Position(depth: %v, indexAtDepth: %v)", p.depth, p.indexAtDepth)
+	return fmt.Sprintf("Position(depth: %v, indexAtDepth: %s)", p.depth, p.indexAtDepth.String())
+}
+
+func (p Position) Equal(other Position) bool {
+	return p.depth == other.depth && p.indexAtDepth.Cmp(other.indexAtDepth) == 0
 }
 
 func (p Position) MoveRight() Position {

@@ -39,6 +39,27 @@ func TestBigMSB(t *testing.T) {
 	}
 }
 
+func TestNewPositionFromGIndex(t *testing.T) {
+	tests := []struct {
+		input    *big.Int
+		expected Position
+	}{
+		{bi(0), NewPosition(0, bi(0))},
+		{bi(1), NewPosition(1, bi(0))},
+		{bi(2), NewPosition(1, bi(1))},
+		{bi(3), NewPosition(2, bi(0))},
+		{bi(4), NewPosition(2, bi(1))},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.input.String(), func(t *testing.T) {
+			p := NewPositionFromGIndex(test.input)
+			require.True(t, test.expected.Equal(p))
+		})
+	}
+}
+
 type testNodeInfo struct {
 	GIndex       *big.Int
 	Depth        int

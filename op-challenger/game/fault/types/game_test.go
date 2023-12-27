@@ -1,7 +1,6 @@
 package types_test
 
 import (
-	"log"
 	"math/big"
 	"testing"
 
@@ -145,14 +144,14 @@ func TestGame_DefendsParent(t *testing.T) {
 				ContractIndex:       len(claims),
 				ParentContractIndex: 0,
 			})
-			log.Printf("test=%+v", test.name)
+			/*log.Printf("test=%+v", test.name)
 			log.Printf("claimGIndex=%s", test.claimGIndex.String())
 			if test.parentGIndex != nil {
 				log.Printf("parentGIndex=%s", test.parentGIndex.String())
 			} else {
 				log.Printf("parentGIndex=nil")
 			}
-			log.Printf("claims=%+v", claims)
+			log.Printf("claims=%+v", claims)*/
 			game := types.NewGameState(claims, testMaxDepth)
 			require.Equal(t, test.defendsParent, game.DefendsParent(claims[len(claims)-1]))
 		})

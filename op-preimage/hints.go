@@ -6,19 +6,17 @@ import (
 	"io"
 )
 
-// HintWriter writes hints to an io.Writer (e.g. a special file descriptor, or a debug log),
+// hintWriter writes hints to an io.Writer (e.g. a special file descriptor, or a debug log),
 // for a pre-image oracle service to prepare specific pre-images.
-type HintWriter struct {
+type hintWriter struct {
 	rw io.ReadWriter
 }
 
-var _ Hinter = (*HintWriter)(nil)
-
-func NewHintWriter(rw io.ReadWriter) *HintWriter {
-	return &HintWriter{rw: rw}
+func NewHintWriter(rw io.ReadWriter) HintWriter {
+	return &hintWriter{rw: rw}
 }
 
-func (hw *HintWriter) Hint(v Hint) {
+func (hw *hintWriter) Write(v Hint) {
 	hint := v.Hint()
 	var hintBytes []byte
 	hintBytes = binary.BigEndian.AppendUint32(hintBytes, uint32(len(hint)))

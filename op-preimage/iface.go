@@ -68,17 +68,3 @@ func (k Keccak256Key) TerminalString() string {
 type Hint interface {
 	Hint() string
 }
-
-// Hinter is an interface to write hints to the host.
-// This may be implemented as a no-op or logging hinter
-// if the program is executing in a read-only environment
-// where the host is expected to have all pre-images ready.
-type Hinter interface {
-	Hint(v Hint)
-}
-
-type HinterFn func(v Hint)
-
-func (fn HinterFn) Hint(v Hint) {
-	fn(v)
-}

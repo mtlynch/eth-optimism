@@ -199,7 +199,7 @@ func TestFetchL2Transactions(t *testing.T) {
 		l2Cl.ExpectInfoAndTxsByHash(hash, eth.BlockToInfo(block), block.Transactions(), nil)
 		defer l2Cl.MockL2Client.AssertExpectations(t)
 
-		oracle := l2.NewPreimageOracle(asOracleFn(t, prefetcher), asHinter(t, prefetcher))
+		oracle := l2.NewPreimageOracle(asOracleFn(t, prefetcher), asHint(t, prefetcher))
 		result := oracle.LoadTransactions(hash, block.TxHash())
 		assertTransactionsEqual(t, block.Transactions(), result)
 	})
@@ -215,7 +215,7 @@ func TestFetchL2Node(t *testing.T) {
 		prefetcher, _, _, kv := createPrefetcher(t)
 		require.NoError(t, kv.Put(key, node))
 
-		oracle := l2.NewPreimageOracle(asOracleFn(t, prefetcher), asHinter(t, prefetcher))
+		oracle := l2.NewPreimageOracle(asOracleFn(t, prefetcher), asHintWriteFn(t, prefetcher))
 		result := oracle.NodeByHash(hash)
 		require.EqualValues(t, node, result)
 	})
@@ -400,7 +400,9 @@ func asOracleFn(t *testing.T, prefetcher *Prefetcher) preimage.OracleFn {
 	}
 }
 
-func asHinter(t *testing.T, prefetcher *Prefetcher) preimage.HinterFn {
+type WriteHintFn func(v preimage.Hint)
+
+func asHintWriteFn(t *testing.T, prefetcher *Prefetcher) WriteHintFn {
 	return func(v preimage.Hint) {
 		err := prefetcher.Hint(v.Hint())
 		require.NoError(t, err)

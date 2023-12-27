@@ -23,24 +23,26 @@ type Oracle interface {
 	ReceiptsByBlockHash(blockHash common.Hash) (eth.BlockInfo, types.Receipts)
 }
 
+type WriteHintFn func(v preimage.Hint)
+
 // PreimageOracle implements Oracle using by interfacing with the pure preimage.Oracle
 // to fetch pre-images to decode into the requested data.
 type PreimageOracle struct {
-	oracle preimage.Oracle
-	hint   preimage.Hinter
+	oracle      preimage.Oracle
+	writeHintFn WriteHintFn
 }
 
 var _ Oracle = (*PreimageOracle)(nil)
 
-func NewPreimageOracle(raw preimage.Oracle, hint preimage.Hinter) *PreimageOracle {
+func NewPreimageOracle(raw preimage.Oracle, writeHint WriteHintFn) *PreimageOracle {
 	return &PreimageOracle{
-		oracle: raw,
-		hint:   hint,
+		oracle:      raw,
+		writeHintFn: writeHint,
 	}
 }
 
 func (p *PreimageOracle) headerByBlockHash(blockHash common.Hash) *types.Header {
-	p.hint.Hint(BlockHeaderHint(blockHash))
+	p.writeHintFn(BlockHeaderHint(blockHash))
 	headerRlp := p.oracle.Get(preimage.Keccak256Key(blockHash))
 	var header types.Header
 	if err := rlp.DecodeBytes(headerRlp, &header); err != nil {
@@ -55,7 +57,7 @@ func (p *PreimageOracle) HeaderByBlockHash(blockHash common.Hash) eth.BlockInfo 
 
 func (p *PreimageOracle) TransactionsByBlockHash(blockHash common.Hash) (eth.BlockInfo, types.Transactions) {
 	header := p.headerByBlockHash(blockHash)
-	p.hint.Hint(TransactionsHint(blockHash))
+	p.writeHintFn(TransactionsHint(blockHash))
 
 	opaqueTxs := mpt.ReadTrie(header.TxHash, func(key common.Hash) []byte {
 		return p.oracle.Get(preimage.Keccak256Key(key))
@@ -72,7 +74,7 @@ func (p *PreimageOracle) TransactionsByBlockHash(blockHash common.Hash) (eth.Blo
 func (p *PreimageOracle) ReceiptsByBlockHash(blockHash common.Hash) (eth.BlockInfo, types.Receipts) {
 	info, txs := p.TransactionsByBlockHash(blockHash)
 
-	p.hint.Hint(ReceiptsHint(blockHash))
+	p.writeHintFn(ReceiptsHint(blockHash))
 
 	opaqueReceipts := mpt.ReadTrie(info.ReceiptHash(), func(key common.Hash) []byte {
 		return p.oracle.Get(preimage.Keccak256Key(key))

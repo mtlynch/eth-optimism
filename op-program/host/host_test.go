@@ -43,7 +43,7 @@ func TestServerMode(t *testing.T) {
 
 	pClient := preimage.NewOracleClient(preimageClient)
 	hClient := preimage.NewHintWriter(hintClient)
-	l1PreimageOracle := l1.NewPreimageOracle(pClient, hClient)
+	l1PreimageOracle := l1.NewPreimageOracle(pClient, hClient.Write)
 
 	require.Equal(t, l1Head.Bytes(), pClient.Get(client.L1HeadLocalIndex), "Should get l1 head preimages")
 	require.Equal(t, l2OutputRoot.Bytes(), pClient.Get(client.L2OutputRootLocalIndex), "Should get l2 output root preimages")

@@ -31,9 +31,9 @@ func mockPreimageOracle(t *testing.T) (po *PreimageOracle, hintsMock *mock.Mock,
 			require.True(t, ok, "preimage must exist")
 			return v
 		}),
-		hint: preimage.HinterFn(func(v preimage.Hint) {
-			hintsMock.MethodCalled("hint", v.Hint())
-		}),
+		writeHintFn: func(v preimage.Hint) {
+			hintsMock.MethodCalled("writeHintFn", v.Hint())
+		},
 	}
 
 	return po, hintsMock, preimages
@@ -57,8 +57,8 @@ func testBlock(t *testing.T, block *types.Block) {
 	// Prepare a raw mock pre-image oracle that will serve the pre-image data and handle hints
 
 	// Check if blocks with txs work
-	hints.On("hint", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
-	hints.On("hint", TransactionsHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", TransactionsHint(block.Hash()).Hint()).Once().Return()
 	gotBlock := po.BlockByHash(block.Hash())
 	hints.AssertExpectations(t)
 
@@ -94,7 +94,7 @@ func TestPreimageOracleNodeByHash(t *testing.T) {
 			h := crypto.Keccak256Hash(node)
 			preimages[preimage.Keccak256Key(h).PreimageKey()] = node
 
-			hints.On("hint", StateNodeHint(h).Hint()).Once().Return()
+			hints.On("writeHintFn", StateNodeHint(h).Hint()).Once().Return()
 			gotNode := po.NodeByHash(h)
 			hints.AssertExpectations(t)
 			require.Equal(t, hexutil.Bytes(node), hexutil.Bytes(gotNode), "node matches")
@@ -115,7 +115,7 @@ func TestPreimageOracleCodeByHash(t *testing.T) {
 			h := crypto.Keccak256Hash(node)
 			preimages[preimage.Keccak256Key(h).PreimageKey()] = node
 
-			hints.On("hint", CodeHint(h).Hint()).Once().Return()
+			hints.On("writeHintFn", CodeHint(h).Hint()).Once().Return()
 			gotNode := po.CodeByHash(h)
 			hints.AssertExpectations(t)
 			require.Equal(t, hexutil.Bytes(node), hexutil.Bytes(gotNode), "code matches")
@@ -133,7 +133,7 @@ func TestPreimageOracleOutputByRoot(t *testing.T) {
 
 			h := common.Hash(eth.OutputRoot(output))
 			preimages[preimage.Keccak256Key(h).PreimageKey()] = output.Marshal()
-			hints.On("hint", L2OutputHint(h).Hint()).Once().Return()
+			hints.On("writeHintFn", L2OutputHint(h).Hint()).Once().Return()
 			gotOutput := po.OutputByRoot(h)
 			hints.AssertExpectations(t)
 			require.Equal(t, hexutil.Bytes(output.Marshal()), hexutil.Bytes(gotOutput.Marshal()), "output matches")

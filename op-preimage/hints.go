@@ -12,13 +12,11 @@ type HintWriter struct {
 	rw io.ReadWriter
 }
 
-var _ Hinter = (*HintWriter)(nil)
-
 func NewHintWriter(rw io.ReadWriter) *HintWriter {
 	return &HintWriter{rw: rw}
 }
 
-func (hw *HintWriter) Hint(v Hint) {
+func (hw *HintWriter) Write(v Hint) {
 	hint := v.Hint()
 	var hintBytes []byte
 	hintBytes = binary.BigEndian.AppendUint32(hintBytes, uint32(len(hint)))

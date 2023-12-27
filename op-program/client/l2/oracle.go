@@ -36,24 +36,26 @@ type Oracle interface {
 	OutputByRoot(root common.Hash) eth.Output
 }
 
+type WriteHintFn func(v preimage.Hint)
+
 // PreimageOracle implements Oracle using by interfacing with the pure preimage.Oracle
 // to fetch pre-images to decode into the requested data.
 type PreimageOracle struct {
-	oracle preimage.Oracle
-	hint   preimage.Hinter
+	oracle      preimage.Oracle
+	writeHintFn WriteHintFn
 }
 
 var _ Oracle = (*PreimageOracle)(nil)
 
-func NewPreimageOracle(raw preimage.Oracle, hint preimage.Hinter) *PreimageOracle {
+func NewPreimageOracle(raw preimage.Oracle, writeHint WriteHintFn) *PreimageOracle {
 	return &PreimageOracle{
-		oracle: raw,
-		hint:   hint,
+		oracle:      raw,
+		writeHintFn: writeHint,
 	}
 }
 
 func (p *PreimageOracle) headerByBlockHash(blockHash common.Hash) *types.Header {
-	p.hint.Hint(BlockHeaderHint(blockHash))
+	p.writeHintFn(BlockHeaderHint(blockHash))
 	headerRlp := p.oracle.Get(preimage.Keccak256Key(blockHash))
 	var header types.Header
 	if err := rlp.DecodeBytes(headerRlp, &header); err != nil {
@@ -70,7 +72,7 @@ func (p *PreimageOracle) BlockByHash(blockHash common.Hash) *types.Block {
 }
 
 func (p *PreimageOracle) LoadTransactions(blockHash common.Hash, txHash common.Hash) []*types.Transaction {
-	p.hint.Hint(TransactionsHint(blockHash))
+	p.writeHintFn(TransactionsHint(blockHash))
 
 	opaqueTxs := mpt.ReadTrie(txHash, func(key common.Hash) []byte {
 		return p.oracle.Get(preimage.Keccak256Key(key))
@@ -84,17 +86,17 @@ func (p *PreimageOracle) LoadTransactions(blockHash common.Hash, txHash common.H
 }
 
 func (p *PreimageOracle) NodeByHash(nodeHash common.Hash) []byte {
-	p.hint.Hint(StateNodeHint(nodeHash))
+	p.writeHintFn(StateNodeHint(nodeHash))
 	return p.oracle.Get(preimage.Keccak256Key(nodeHash))
 }
 
 func (p *PreimageOracle) CodeByHash(codeHash common.Hash) []byte {
-	p.hint.Hint(CodeHint(codeHash))
+	p.writeHintFn(CodeHint(codeHash))
 	return p.oracle.Get(preimage.Keccak256Key(codeHash))
 }
 
 func (p *PreimageOracle) OutputByRoot(l2OutputRoot common.Hash) eth.Output {
-	p.hint.Hint(L2OutputHint(l2OutputRoot))
+	p.writeHintFn(L2OutputHint(l2OutputRoot))
 	data := p.oracle.Get(preimage.Keccak256Key(l2OutputRoot))
 	output, err := eth.UnmarshalOutput(data)
 	if err != nil {

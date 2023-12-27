@@ -29,7 +29,7 @@ func TestHints(t *testing.T) {
 		go func() {
 			hw := NewHintWriter(a)
 			for _, h := range hints {
-				hw.Hint(rawHint(h))
+				hw.Write(rawHint(h))
 			}
 			wg.Done()
 		}()
@@ -82,7 +82,7 @@ func TestHints(t *testing.T) {
 	t.Run("unexpected EOF", func(t *testing.T) {
 		var buf bytes.Buffer
 		hw := NewHintWriter(&buf)
-		hw.Hint(rawHint("hello"))
+		hw.Write(rawHint("hello"))
 		_, _ = buf.Read(make([]byte, 1)) // read one byte so it falls short, see if it's detected
 		hr := NewHintReader(&buf)
 		err := hr.NextHint(func(hint string) error { return nil })
@@ -95,8 +95,8 @@ func TestHints(t *testing.T) {
 
 		go func() {
 			hw := NewHintWriter(a)
-			hw.Hint(rawHint("one"))
-			hw.Hint(rawHint("two"))
+			hw.Write(rawHint("one"))
+			hw.Write(rawHint("two"))
 			wg.Done()
 		}()
 		go func() {

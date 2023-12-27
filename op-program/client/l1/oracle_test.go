@@ -50,13 +50,13 @@ func testBlock(t *testing.T, block *types.Block, receipts []*types.Receipt) {
 			require.True(t, ok, "preimage must exist")
 			return v
 		}),
-		hint: preimage.HinterFn(func(v preimage.Hint) {
-			hints.MethodCalled("hint", v.Hint())
-		}),
+		writeHintFn: func(v preimage.Hint) {
+			hints.MethodCalled("writeHintFn", v.Hint())
+		},
 	}
 
 	// Check if block-headers work
-	hints.On("hint", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
 	gotHeader := po.HeaderByBlockHash(block.Hash())
 	hints.AssertExpectations(t)
 
@@ -67,8 +67,8 @@ func testBlock(t *testing.T, block *types.Block, receipts []*types.Receipt) {
 	require.Equal(t, expected, got, "expecting matching headers")
 
 	// Check if blocks with txs work
-	hints.On("hint", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
-	hints.On("hint", TransactionsHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", TransactionsHint(block.Hash()).Hint()).Once().Return()
 	inf, gotTxs := po.TransactionsByBlockHash(block.Hash())
 	hints.AssertExpectations(t)
 
@@ -80,9 +80,9 @@ func testBlock(t *testing.T, block *types.Block, receipts []*types.Receipt) {
 	}
 
 	// Check if blocks with receipts work
-	hints.On("hint", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
-	hints.On("hint", TransactionsHint(block.Hash()).Hint()).Once().Return()
-	hints.On("hint", ReceiptsHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", BlockHeaderHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", TransactionsHint(block.Hash()).Hint()).Once().Return()
+	hints.On("writeHintFn", ReceiptsHint(block.Hash()).Hint()).Once().Return()
 	inf, gotReceipts := po.ReceiptsByBlockHash(block.Hash())
 	hints.AssertExpectations(t)
 

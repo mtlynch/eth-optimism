@@ -26,7 +26,7 @@ type Game interface {
 	DefendsParent(claim Claim) bool
 
 	// IsDuplicate returns true if the provided [Claim] already exists in the game state
-	// referencing the same parent claim
+	// referencing the same parent claim.
 	IsDuplicate(claim Claim) bool
 
 	// AgreeWithClaimLevel returns if the game state agrees with the provided claim level.
@@ -56,7 +56,7 @@ type gameState struct {
 
 // NewGameState returns a new game state.
 // The provided [Claim] is used as the root node.
-func NewGameState(claims []Claim, depth uint64) *gameState {
+func NewGameState(claims []Claim, depth uint64) Game {
 	claimIDs := make(map[claimID]bool)
 	for _, claim := range claims {
 		claimIDs[computeClaimID(claim)] = true

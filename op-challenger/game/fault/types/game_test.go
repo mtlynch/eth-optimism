@@ -1,8 +1,11 @@
-package types
+package types_test
 
 import (
+	"log"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -10,40 +13,40 @@ import (
 
 const testMaxDepth = 3
 
-func createTestClaims() (Claim, Claim, Claim, Claim) {
+func createTestClaims() (types.Claim, types.Claim, types.Claim, types.Claim) {
 	// root & middle are from the trace "abcdexyz"
 	// top & bottom are from the trace  "abcdefgh"
-	root := Claim{
-		ClaimData: ClaimData{
+	root := types.Claim{
+		ClaimData: types.ClaimData{
 			Value:    common.HexToHash("0x000000000000000000000000000000000000000000000000000000000000077a"),
-			Position: NewPosition(0, common.Big0),
+			Position: types.NewPosition(0, common.Big0),
 		},
-		// Root claim has no parent
+		// Root types.Claim has no parent
 	}
-	top := Claim{
-		ClaimData: ClaimData{
+	top := types.Claim{
+		ClaimData: types.ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000364"),
-			Position: NewPosition(1, common.Big0),
+			Position: types.NewPosition(1, common.Big0),
 		},
 		ContractIndex:       1,
-		ParentContractIndex: 0,
+		ParentContractIndex: root.ContractIndex,
 	}
-	middle := Claim{
-		ClaimData: ClaimData{
+	middle := types.Claim{
+		ClaimData: types.ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000578"),
-			Position: NewPosition(2, big.NewInt(2)),
+			Position: types.NewPosition(2, big.NewInt(2)),
 		},
 		ContractIndex:       2,
-		ParentContractIndex: 1,
+		ParentContractIndex: top.ContractIndex,
 	}
 
-	bottom := Claim{
-		ClaimData: ClaimData{
+	bottom := types.Claim{
+		ClaimData: types.ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000465"),
-			Position: NewPosition(3, big.NewInt(4)),
+			Position: types.NewPosition(3, big.NewInt(4)),
 		},
 		ContractIndex:       3,
-		ParentContractIndex: 2,
+		ParentContractIndex: middle.ContractIndex,
 	}
 
 	return root, top, middle, bottom
@@ -51,7 +54,7 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 
 func TestIsDuplicate(t *testing.T) {
 	root, top, middle, bottom := createTestClaims()
-	g := NewGameState([]Claim{root, top}, testMaxDepth)
+	g := types.NewGameState([]types.Claim{root, top}, testMaxDepth)
 
 	// Root + Top should be duplicates
 	require.True(t, g.IsDuplicate(root))
@@ -65,85 +68,93 @@ func TestIsDuplicate(t *testing.T) {
 func TestGame_Claims(t *testing.T) {
 	// Setup the game state.
 	root, top, middle, bottom := createTestClaims()
-	expected := []Claim{root, top, middle, bottom}
-	g := NewGameState(expected, testMaxDepth)
+	expected := []types.Claim{root, top, middle, bottom}
+	g := types.NewGameState(expected, testMaxDepth)
 
-	// Validate claim pairs.
+	// Validate types.Claim pairs.
 	actual := g.Claims()
 	require.ElementsMatch(t, expected, actual)
 }
 
 func TestGame_DefendsParent(t *testing.T) {
 	tests := []struct {
-		name     string
-		game     *gameState
-		expected bool
+		name          string
+		claimGIndex   *big.Int
+		parentGIndex  *big.Int
+		defendsParent bool
 	}{
 		{
-			name:     "LeftChildAttacks",
-			game:     buildGameWithClaim(big.NewInt(2), big.NewInt(1)),
-			expected: false,
+			name:          "LeftChildDoesntDefend",
+			claimGIndex:   big.NewInt(2),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: false,
 		},
 		{
-			name:     "RightChildDoesntDefend",
-			game:     buildGameWithClaim(big.NewInt(3), big.NewInt(1)),
-			expected: false,
+			name:          "RightChildDoesntDefend",
+			claimGIndex:   big.NewInt(3),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: false,
 		},
 		{
-			name:     "SubChildDoesntDefend",
-			game:     buildGameWithClaim(big.NewInt(4), big.NewInt(1)),
-			expected: false,
+			name:          "GrandchildDoesntDefend",
+			claimGIndex:   big.NewInt(4),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: false,
 		},
 		{
-			name:     "SubSecondChildDoesntDefend",
-			game:     buildGameWithClaim(big.NewInt(5), big.NewInt(1)),
-			expected: false,
+			name:          "SecondGrandchildDoesntDefend",
+			claimGIndex:   big.NewInt(5),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: false,
 		},
 		{
-			name:     "RightLeftChildDefendsParent",
-			game:     buildGameWithClaim(big.NewInt(6), big.NewInt(1)),
-			expected: true,
+			name:          "RightLeftChildDefends",
+			claimGIndex:   big.NewInt(6),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: true,
 		},
 		{
-			name:     "SubThirdChildDefends",
-			game:     buildGameWithClaim(big.NewInt(7), big.NewInt(1)),
-			expected: true,
+			name:          "SubThirdChildDefends",
+			claimGIndex:   big.NewInt(7),
+			parentGIndex:  big.NewInt(1),
+			defendsParent: true,
 		},
 		{
-			name: "RootDoesntDefend",
-			game: NewGameState([]Claim{
-				{
-					ClaimData: ClaimData{
-						Position: NewPositionFromGIndex(big.NewInt(0)),
-					},
-					ContractIndex: 0,
-				},
-			}, testMaxDepth),
-			expected: false,
+			name:          "RootDoesntDefend",
+			claimGIndex:   big.NewInt(0),
+			parentGIndex:  nil,
+			defendsParent: false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			claims := test.game.Claims()
-			require.Equal(t, test.expected, test.game.DefendsParent(claims[len(claims)-1]))
+			claims := []types.Claim{}
+			if test.parentGIndex != nil {
+				claims = append(claims, types.Claim{
+					ClaimData: types.ClaimData{
+						Position: types.NewPositionFromGIndex(test.parentGIndex),
+					},
+					ContractIndex: len(claims),
+				})
+			}
+			claims = append(claims, types.Claim{
+				ClaimData: types.ClaimData{
+					Position: types.NewPositionFromGIndex(test.claimGIndex),
+				},
+				ContractIndex:       len(claims),
+				ParentContractIndex: 0,
+			})
+			log.Printf("test=%+v", test.name)
+			log.Printf("claimGIndex=%s", test.claimGIndex.String())
+			if test.parentGIndex != nil {
+				log.Printf("parentGIndex=%s", test.parentGIndex.String())
+			} else {
+				log.Printf("parentGIndex=nil")
+			}
+			log.Printf("claims=%+v", claims)
+			game := types.NewGameState(claims, testMaxDepth)
+			require.Equal(t, test.defendsParent, game.DefendsParent(claims[len(claims)-1]))
 		})
 	}
-}
-
-func buildGameWithClaim(claimGIndex *big.Int, parentGIndex *big.Int) *gameState {
-	parentClaim := Claim{
-		ClaimData: ClaimData{
-			Position: NewPositionFromGIndex(parentGIndex),
-		},
-		ContractIndex: 0,
-	}
-	claim := Claim{
-		ClaimData: ClaimData{
-			Position: NewPositionFromGIndex(claimGIndex),
-		},
-		ContractIndex:       1,
-		ParentContractIndex: 0,
-	}
-	return NewGameState([]Claim{parentClaim, claim}, testMaxDepth)
 }

@@ -10,15 +10,27 @@ import (
 
 var (
 	ErrPositionDepthTooSmall = errors.New("position depth is too small")
+	ErrInvalidPositionIndex  = errors.New("position index must be a positive number")
 )
+
+type PositionIndex struct {
+	val *big.Int
+}
+
+func NewPositionIndex(value *big.Int) (PositionIndex, error) {
+	if value == nil || value.Cmp(common.Big0) < 0 {
+		return PositionIndex{}, ErrInvalidPositionIndex
+	}
+	return PositionIndex{value}, nil
+}
 
 // Position is a golang wrapper around the dispute game Position type.
 type Position struct {
 	depth        int
-	indexAtDepth *big.Int
+	indexAtDepth PositionIndex
 }
 
-func NewPosition(depth int, indexAtDepth *big.Int) Position {
+func NewPosition(depth int, indexAtDepth PositionIndex) Position {
 	return Position{
 		depth:        depth,
 		indexAtDepth: indexAtDepth,
@@ -38,7 +50,10 @@ func NewPosition(depth int, indexAtDepth *big.Int) Position {
 func NewPositionFromGIndex(x *big.Int) Position {
 	depth := bigMSB(x)
 	withoutMSB := new(big.Int).Not(new(big.Int).Lsh(big.NewInt(1), uint(depth)))
-	indexAtDepth := new(big.Int).And(x, withoutMSB)
+	indexAtDepth, err := NewPositionIndex(new(big.Int).And(x, withoutMSB))
+	if err != nil {
+		panic(err)
+	}
 	return NewPosition(depth, indexAtDepth)
 }
 
@@ -73,10 +88,7 @@ func (p Position) Depth() int {
 	return p.depth
 }
 
-func (p Position) IndexAtDepth() *big.Int {
-	if p.indexAtDepth == nil {
-		return common.Big0
-	}
+func (p Position) IndexAtDepth() PositionIndex {
 	return p.indexAtDepth
 }
 

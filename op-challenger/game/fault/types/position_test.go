@@ -351,8 +351,8 @@ func TestRelativeMoves(t *testing.T) {
 	for i, test := range tests {
 		test := test
 		t.Run("", func(t *testing.T) {
-			expectedRelativePosition := test(NewPositionFromGIndex(big.NewInt(1)))
-			relative := NewPositionFromGIndex(big.NewInt(3))
+			expectedRelativePosition := test(NewPositionFromGIndex(big.NewInt(2)))
+			relative := NewPositionFromGIndex(big.NewInt(5))
 			start := test(relative)
 			relativePosition, err := start.RelativeToAncestorAtDepth(uint64(relative.Depth()))
 			require.NoError(t, err)

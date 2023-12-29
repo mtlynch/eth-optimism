@@ -3,6 +3,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +20,20 @@ type Position struct {
 }
 
 func NewPosition(depth int, indexAtDepth *big.Int) Position {
+	log.Printf("creating new position with depth=%d, index=%s", depth, indexAtDepth) // DEBUG
+	if depth < 0 {
+		panic(fmt.Sprintf("position depth must be non-negative, got %d", depth))
+	}
+	if indexAtDepth == nil || indexAtDepth.Cmp(common.Big0) < 0 {
+		panic(fmt.Sprintf("invalid indexAtDepth for position, got %s", indexAtDepth))
+	}
+	bigDepth := big.NewInt(int64(depth))
+	depthToPowerOfTwo := bigDepth.Exp(big.NewInt(2), bigDepth, nil)
+	maxIndex := depthToPowerOfTwo.Sub(depthToPowerOfTwo, big.NewInt(1))
+	if indexAtDepth.Cmp(maxIndex) > 0 {
+		panic(fmt.Sprintf("for depth of %d, expected maximum index of %s for position, got %s", depth, maxIndex, indexAtDepth))
+	}
+
 	return Position{
 		depth:        depth,
 		indexAtDepth: indexAtDepth,
@@ -50,11 +65,14 @@ func (p Position) String() string {
 	return fmt.Sprintf("Position(depth: %v, indexAtDepth: %v)", p.depth, p.indexAtDepth)
 }
 
-func (p Position) MoveRight() Position {
-	return Position{
-		depth:        p.depth,
-		indexAtDepth: new(big.Int).Add(p.indexAtDepth, big.NewInt(1)),
-	}
+func (p Position) LeftChild() Position {
+	log.Printf("getting left child of %s", p)                                           // DEBUG
+	log.Printf("new index is %s", new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(0)))) // DEBUG
+	return NewPosition(p.depth+1, new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(0))))
+}
+
+func (p Position) RightChild() Position {
+	return NewPosition(p.depth+1, new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(1))))
 }
 
 // RelativeToAncestorAtDepth returns a new position for a subtree.
@@ -66,6 +84,7 @@ func (p Position) RelativeToAncestorAtDepth(ancestor uint64) (Position, error) {
 	newPosDepth := uint64(p.depth) - ancestor
 	nodesAtDepth := 1 << newPosDepth
 	newIndexAtDepth := new(big.Int).Mod(p.indexAtDepth, big.NewInt(int64(nodesAtDepth)))
+	log.Printf("relative to %s, creating new position at depth %d with depth %d and index %s", p, ancestor, newPosDepth, newIndexAtDepth)
 	return NewPosition(int(newPosDepth), newIndexAtDepth), nil
 }
 
@@ -74,9 +93,6 @@ func (p Position) Depth() int {
 }
 
 func (p Position) IndexAtDepth() *big.Int {
-	if p.indexAtDepth == nil {
-		return common.Big0
-	}
 	return p.indexAtDepth
 }
 
@@ -99,22 +115,6 @@ func (p Position) TraceIndex(maxDepth int) *big.Int {
 	return ti
 }
 
-// move returns a new position at the left or right child.
-func (p Position) move(right bool) Position {
-	return Position{
-		depth:        p.depth + 1,
-		indexAtDepth: new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(boolToInt(right)))),
-	}
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
-}
-
 func (p Position) parentIndexAtDepth() *big.Int {
 	return new(big.Int).Div(p.IndexAtDepth(), big.NewInt(2))
 }
@@ -125,20 +125,17 @@ func (p Position) RightOf(parent Position) bool {
 
 // parent return a new position that is the parent of this Position.
 func (p Position) parent() Position {
-	return Position{
-		depth:        p.depth - 1,
-		indexAtDepth: p.parentIndexAtDepth(),
-	}
+	return NewPosition(p.depth-1, p.parentIndexAtDepth())
 }
 
 // Attack creates a new position which is the attack position of this one.
 func (p Position) Attack() Position {
-	return p.move(false)
+	return p.LeftChild()
 }
 
 // Defend creates a new position which is the defend position of this one.
 func (p Position) Defend() Position {
-	return p.parent().move(true).move(false)
+	return p.parent().RightChild().LeftChild()
 }
 
 func (p Position) Print(maxDepth int) {

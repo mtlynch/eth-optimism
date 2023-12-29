@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"testing"
@@ -89,6 +90,45 @@ func TestGindexPositionConversions(t *testing.T) {
 			require.Truef(t, test.expectedPosition.Equal(positionActual), "expected position=%s, got=%s", test.expectedPosition, positionActual)
 			gindex := positionActual.ToGIndex()
 			require.Truef(t, gindex.Cmp(test.gindex) == 0, "expected gindex=%s, got=%s", test.gindex.String(), gindex.String())
+		})
+	}
+}
+
+func TestNewPositionRejectsInvalidPosition(t *testing.T) {
+	tests := []struct {
+		name         string
+		depth        int
+		indexAtDepth *big.Int
+	}{
+		{
+			name:         "indexAtDepth can't be nil",
+			depth:        1,
+			indexAtDepth: nil,
+		},
+		{
+			name:         "indexAtDepth can't be negative",
+			depth:        1,
+			indexAtDepth: bi(-1),
+		},
+		{
+			name:         "indexAtDepth can't be more than 2^depth - 1",
+			depth:        0,
+			indexAtDepth: bi(1),
+		},
+		{
+			name:         "indexAtDepth can't be more than 2^depth - 1",
+			depth:        3,
+			indexAtDepth: bi(8),
+		},
+		{
+			name:         "depth can't be negative",
+			depth:        -1,
+			indexAtDepth: bi(0),
+		},
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%s: depth=%d, position=%s", test.name, test.depth, test.indexAtDepth.String()), func(t *testing.T) {
+			require.Panics(t, func() { NewPosition(test.depth, test.indexAtDepth) })
 		})
 	}
 }
@@ -261,12 +301,15 @@ func TestRelativeToAncestorAtDepth(t *testing.T) {
 func TestRelativeMoves(t *testing.T) {
 	tests := []func(pos Position) Position{
 		func(pos Position) Position {
+			log.Printf("attacking %s", pos) // DEBUG
 			return pos.Attack()
 		},
 		func(pos Position) Position {
+			log.Printf("defending %s", pos) // DEBUG
 			return pos.Defend()
 		},
 		func(pos Position) Position {
+			log.Printf("attack, attacking %s", pos) // DEBUG
 			return pos.Attack().Attack()
 		},
 		func(pos Position) Position {
@@ -279,7 +322,7 @@ func TestRelativeMoves(t *testing.T) {
 			return pos.Defend().Attack()
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		test := test
 		t.Run("", func(t *testing.T) {
 			expectedRelativePosition := test(NewPositionFromGIndex(big.NewInt(1)))
@@ -288,6 +331,7 @@ func TestRelativeMoves(t *testing.T) {
 			relativePosition, err := start.RelativeToAncestorAtDepth(uint64(relative.Depth()))
 			require.NoError(t, err)
 			require.Equal(t, expectedRelativePosition.ToGIndex(), relativePosition.ToGIndex())
+			log.Printf("end of test %d", i) // DEBUG
 		})
 	}
 }

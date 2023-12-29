@@ -200,24 +200,50 @@ func TestTraceIndex(t *testing.T) {
 }
 
 func TestAttack(t *testing.T) {
-	for _, test := range treeNodes {
-		if test.AttackGIndex == nil || test.AttackGIndex.Cmp(big.NewInt(0)) == 0 {
-			continue
-		}
-		pos := NewPosition(test.Depth, test.IndexAtDepth)
+	tests := []struct {
+		startGIndex  *big.Int
+		attackGIndex *big.Int
+	}{
+		{bi(1), bi(2)},
+		{bi(2), bi(4)},
+		{bi(3), bi(6)},
+		{bi(4), bi(8)},
+		{bi(5), bi(10)},
+		{bi(6), bi(12)},
+		{bi(7), bi(14)},
+		{bi(8), bi(16)},
+		{bi(9), bi(18)},
+		{bi(10), bi(20)},
+		{bi(11), bi(22)},
+		{bi(12), bi(24)},
+		{bi(13), bi(26)},
+		{bi(14), bi(28)},
+		{bi(15), bi(30)},
+	}
+	for _, test := range tests {
+		pos := NewPositionFromGIndex(test.startGIndex)
 		result := pos.Attack()
-		require.Equalf(t, test.AttackGIndex, result.ToGIndex(), "Attack from GIndex %v", pos.ToGIndex())
+		require.Zerof(t, test.attackGIndex.Cmp(result.ToGIndex()), "attacking GIndex %s, expected=%s, got=%s", test.startGIndex, test.attackGIndex, result.ToGIndex())
 	}
 }
 
 func TestDefend(t *testing.T) {
-	for _, test := range treeNodes {
-		if test.DefendGIndex == nil || test.DefendGIndex.Cmp(big.NewInt(0)) == 0 {
-			continue
-		}
-		pos := NewPosition(test.Depth, test.IndexAtDepth)
+	tests := []struct {
+		startGIndex  *big.Int
+		defendGIndex *big.Int
+	}{
+		{bi(2), bi(6)},
+		{bi(4), bi(10)},
+		{bi(6), bi(14)},
+		{bi(8), bi(18)},
+		{bi(10), bi(22)},
+		{bi(12), bi(26)},
+		{bi(14), bi(30)},
+	}
+	for _, test := range tests {
+		pos := NewPositionFromGIndex(test.startGIndex)
 		result := pos.Defend()
-		require.Equalf(t, test.DefendGIndex, result.ToGIndex(), "Defend from GIndex %v", pos.ToGIndex())
+		require.Zerof(t, test.defendGIndex.Cmp(result.ToGIndex()), "defending GIndex %s, expected=%s, got=%s", test.startGIndex, test.defendGIndex, result.ToGIndex())
 	}
 }
 

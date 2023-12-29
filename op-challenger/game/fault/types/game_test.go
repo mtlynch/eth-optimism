@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testMaxDepth = 3
+var testMaxDepth = NewDepth(3)
 
 func createTestClaims() (Claim, Claim, Claim, Claim) {
 	// root & middle are from the trace "abcdexyz"
@@ -16,14 +16,14 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	root := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x000000000000000000000000000000000000000000000000000000000000077a"),
-			Position: NewPosition(0, common.Big0),
+			Position: NewPosition(NewDepth(0), common.Big0),
 		},
 		// Root claim has no parent
 	}
 	top := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000364"),
-			Position: NewPosition(1, common.Big0),
+			Position: NewPosition(NewDepth(1), common.Big0),
 		},
 		ContractIndex:       1,
 		ParentContractIndex: 0,
@@ -31,7 +31,7 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	middle := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000578"),
-			Position: NewPosition(2, big.NewInt(2)),
+			Position: NewPosition(NewDepth(2), big.NewInt(2)),
 		},
 		ContractIndex:       2,
 		ParentContractIndex: 1,
@@ -40,7 +40,7 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	bottom := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000465"),
-			Position: NewPosition(3, big.NewInt(4)),
+			Position: NewPosition(NewDepth(3), big.NewInt(4)),
 		},
 		ContractIndex:       3,
 		ParentContractIndex: 2,

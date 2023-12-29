@@ -70,7 +70,7 @@ func NewGameState(claims []Claim, depth Depth) *gameState {
 
 // AgreeWithClaimLevel returns if the game state agrees with the provided claim level.
 func (g *gameState) AgreeWithClaimLevel(claim Claim, agreeWithRootClaim bool) bool {
-	isOddLevel := claim.Depth()%2 == 1
+	isOddLevel := claim.Depth().IsOdd()
 	// If we agree with the proposed output, we agree with odd levels
 	// If we disagree with the proposed output, we agree with the root claim level & even levels
 	if agreeWithRootClaim {

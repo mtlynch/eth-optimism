@@ -239,7 +239,7 @@ func setupWithTestData(t *testing.T, dataDir string, prestate string) (*CannonTr
 		dir:       dataDir,
 		generator: generator,
 		prestate:  filepath.Join(dataDir, prestate),
-		gameDepth: 63,
+		gameDepth: types.NewDepth(63),
 	}, generator
 }
 

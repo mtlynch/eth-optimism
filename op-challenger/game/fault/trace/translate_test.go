@@ -11,8 +11,8 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
-	orig := alphabet.NewTraceProvider("abcdefghij", 4)
-	translated := Translate(orig, 3)
+	orig := alphabet.NewTraceProvider("abcdefghij", types.NewDepth(4))
+	translated := Translate(orig, types.NewDepth(3))
 	// All nodes on the first translated layer, map to GIndex 1
 	for i := int64(8); i <= 15; i++ {
 		requireSameValue(t, orig, 1, translated, i)
@@ -50,8 +50,8 @@ func requireSameValue(t *testing.T, a types.TraceProvider, aGIdx int64, b types.
 }
 
 func TestTranslate_AbsolutePreStateCommitment(t *testing.T) {
-	orig := alphabet.NewTraceProvider("abcdefghij", 4)
-	translated := Translate(orig, 3)
+	orig := alphabet.NewTraceProvider("abcdefghij", types.NewDepth(4))
+	translated := Translate(orig, types.NewDepth(3))
 	origValue, err := orig.AbsolutePreStateCommitment(context.Background())
 	require.NoError(t, err)
 	translatedValue, err := translated.AbsolutePreStateCommitment(context.Background())

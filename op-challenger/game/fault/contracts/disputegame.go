@@ -88,9 +88,9 @@ func (f *disputeGameContract) GetMaxGameDepth(ctx context.Context) (types.Depth,
 
 	result, err := f.multiCaller.SingleCall(ctx, batching.BlockLatest, f.contract.Call(methodMaxGameDepth))
 	if err != nil {
-		return 0, fmt.Errorf("failed to fetch max game depth: %w", err)
+		return types.NewDepth(0), fmt.Errorf("failed to fetch max game depth: %w", err)
 	}
-	return types.Depth(result.GetBigInt(0).Uint64()), nil
+	return types.NewDepth(result.GetBigInt(0).Uint64()), nil
 }
 
 func (f *disputeGameContract) GetAbsolutePrestateHash(ctx context.Context) (common.Hash, error) {

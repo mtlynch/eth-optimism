@@ -68,9 +68,9 @@ func (c *OutputBisectionGameContract) GetGenesisOutputRoot(ctx context.Context) 
 func (c *OutputBisectionGameContract) GetSplitDepth(ctx context.Context) (types.Depth, error) {
 	splitDepth, err := c.multiCaller.SingleCall(ctx, batching.BlockLatest, c.contract.Call(methodSplitDepth))
 	if err != nil {
-		return 0, fmt.Errorf("failed to retrieve split depth: %w", err)
+		return types.NewDepth(0), fmt.Errorf("failed to retrieve split depth: %w", err)
 	}
-	return types.Depth(splitDepth.GetBigInt(0).Uint64()), nil
+	return types.NewDepth(splitDepth.GetBigInt(0).Uint64()), nil
 }
 
 func (f *OutputBisectionGameContract) UpdateOracleTx(ctx context.Context, claimIdx uint64, data *types.PreimageOracleData) (txmgr.TxCandidate, error) {

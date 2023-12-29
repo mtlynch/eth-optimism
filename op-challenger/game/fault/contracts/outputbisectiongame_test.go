@@ -35,8 +35,8 @@ func TestGetBlockRange(t *testing.T) {
 
 func TestGetSplitDepth(t *testing.T) {
 	stubRpc, contract := setupOutputBisectionGameTest(t)
-	expectedSplitDepth := types.Depth(15)
-	stubRpc.SetResponse(fdgAddr, methodSplitDepth, batching.BlockLatest, nil, []interface{}{new(big.Int).SetUint64(uint64(expectedSplitDepth))})
+	expectedSplitDepth := types.NewDepth(15)
+	stubRpc.SetResponse(fdgAddr, methodSplitDepth, batching.BlockLatest, nil, []interface{}{new(big.Int).SetUint64(expectedSplitDepth.AsUint64())})
 	splitDepth, err := contract.GetSplitDepth(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, expectedSplitDepth, splitDepth)

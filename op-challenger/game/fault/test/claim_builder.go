@@ -78,7 +78,7 @@ func (c *ClaimBuilder) CreateRootClaim(correct bool) types.Claim {
 	claim := types.Claim{
 		ClaimData: types.ClaimData{
 			Value:    value,
-			Position: types.NewPosition(0, common.Big0),
+			Position: types.NewPosition(types.NewDepth(0), common.Big0),
 		},
 	}
 	return claim

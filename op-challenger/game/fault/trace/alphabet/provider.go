@@ -30,7 +30,7 @@ type AlphabetTraceProvider struct {
 	AlphabetPrestateProvider
 	state  []string
 	depth  types.Depth
-	maxLen uint64
+	maxLen *big.Int
 }
 
 // NewTraceProvider returns a new [AlphabetProvider].
@@ -38,7 +38,7 @@ func NewTraceProvider(state string, depth types.Depth) *AlphabetTraceProvider {
 	return &AlphabetTraceProvider{
 		state:  strings.Split(state, ""),
 		depth:  depth,
-		maxLen: uint64(1 << depth),
+		maxLen: depth.MaxGIndex(),
 	}
 }
 
@@ -50,7 +50,7 @@ func (ap *AlphabetTraceProvider) GetStepData(ctx context.Context, i types.Positi
 	// We want the pre-state which is the value prior to the one requested
 	traceIndex = traceIndex.Sub(traceIndex, big.NewInt(1))
 	// The index cannot be larger than the maximum index as computed by the depth.
-	if traceIndex.Cmp(big.NewInt(int64(ap.maxLen))) >= 0 {
+	if traceIndex.Cmp(ap.maxLen) >= 0 {
 		return nil, nil, nil, fmt.Errorf("%w traceIndex: %v max: %v pos: %v", ErrIndexTooLarge, traceIndex, ap.maxLen, i)
 	}
 	// We extend the deepest hash to the maximum depth if the trace is not expansive.
@@ -64,7 +64,7 @@ func (ap *AlphabetTraceProvider) GetStepData(ctx context.Context, i types.Positi
 
 // Get returns the claim value at the given index in the trace.
 func (ap *AlphabetTraceProvider) Get(ctx context.Context, i types.Position) (common.Hash, error) {
-	if i.Depth() > ap.depth {
+	if i.Depth().DeeperThan(ap.depth) {
 		return common.Hash{}, fmt.Errorf("%w depth: %v max: %v", ErrIndexTooLarge, i.Depth(), ap.depth)
 	}
 	// Step data returns the pre-state, so add 1 to get the state for index i

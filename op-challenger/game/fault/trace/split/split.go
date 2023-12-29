@@ -21,7 +21,7 @@ func NewSplitProviderSelector(topProvider types.TraceProvider, topDepth types.De
 		if pos.Depth() <= topDepth {
 			return topProvider, nil
 		}
-		if ref.Position.Depth() < topDepth {
+		if topDepth.DeeperThan(ref.Position.Depth()) {
 			return nil, fmt.Errorf("%w, claim depth: %v, depth required: %v", errRefClaimNotDeepEnough, ref.Position.Depth(), topDepth)
 		}
 
@@ -64,12 +64,12 @@ func NewSplitProviderSelector(topProvider types.TraceProvider, topDepth types.De
 			return nil, err
 		}
 		// Translate such that the root of the bottom game is the level below the top game leaf
-		return trace.Translate(provider, topDepth+1), nil
+		return trace.Translate(provider, topDepth.OneLevelDeeper()), nil
 	}
 }
 
 func findAncestorAtDepth(game types.Game, claim types.Claim, depth types.Depth) (types.Claim, error) {
-	for claim.Depth() > depth {
+	for claim.Depth().DeeperThan(depth) {
 		parent, err := game.GetParent(claim)
 		if err != nil {
 			return types.Claim{}, fmt.Errorf("failed to find ancestor at depth %v: %w", depth, err)

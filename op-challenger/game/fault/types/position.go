@@ -3,6 +3,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,7 +13,62 @@ var (
 	ErrPositionDepthTooSmall = errors.New("position depth is too small")
 )
 
-type Depth uint64
+type Depth struct {
+	val uint64
+}
+
+func NewDepth(d uint64) Depth {
+	return Depth{d}
+}
+
+func (d Depth) IsRoot() bool {
+	return d.val == 0
+}
+
+func (d Depth) IsOdd() bool {
+	return d.val%2 == 1
+}
+
+func (d Depth) AsUint64() uint64 {
+	return d.val
+}
+
+func (d Depth) AsUint() uint {
+	if d.val > math.MaxUint {
+		panic(fmt.Sprintf("cannot convert %d to uint", d.val))
+	}
+	return uint(d.val)
+}
+
+func (d Depth) MaxGIndex() *big.Int {
+	// TODO: Check maxint64
+	return new(big.Int).Lsh(big.NewInt(1), uint(d.val))
+}
+
+func (d Depth) OneLevelShallower() Depth {
+	if d.IsRoot() {
+		panic("can't go shallower than root depth")
+	}
+	return NewDepth(d.val - 1)
+}
+
+func (d Depth) OneLevelDeeper() Depth {
+	if d.val == math.MaxUint64 {
+		panic("already at deeepest possible level")
+	}
+	return NewDepth(d.val + 1)
+}
+
+func (d Depth) DeeperThan(other Depth) bool {
+	return d.val > other.val
+}
+
+func (d Depth) RelativeDepth(ancestor Depth) Depth {
+	if ancestor.DeeperThan(d) {
+		panic("can't calculate relative depth when ancestor is deeper")
+	}
+	return NewDepth(ancestor.val - d.val)
+}
 
 // Position is a golang wrapper around the dispute game Position type.
 type Position struct {
@@ -29,7 +85,7 @@ func NewPosition(depth Depth, indexAtDepth *big.Int) Position {
 
 func NewPositionFromGIndex(x *big.Int) Position {
 	depth := bigMSB(x)
-	withoutMSB := new(big.Int).Not(new(big.Int).Lsh(big.NewInt(1), uint(depth)))
+	withoutMSB := new(big.Int).Not(new(big.Int).Lsh(big.NewInt(1), depth.AsUint()))
 	indexAtDepth := new(big.Int).And(x, withoutMSB)
 	return NewPosition(depth, indexAtDepth)
 }
@@ -48,12 +104,11 @@ func (p Position) MoveRight() Position {
 // RelativeToAncestorAtDepth returns a new position for a subtree.
 // [ancestor] is the depth of the subtree root node.
 func (p Position) RelativeToAncestorAtDepth(ancestor Depth) (Position, error) {
-	if ancestor > p.depth {
+	if ancestor.DeeperThan(p.depth) {
 		return Position{}, ErrPositionDepthTooSmall
 	}
-	newPosDepth := p.depth - ancestor
-	nodesAtDepth := 1 << newPosDepth
-	newIndexAtDepth := new(big.Int).Mod(p.indexAtDepth, big.NewInt(int64(nodesAtDepth)))
+	newPosDepth := p.depth.RelativeDepth(ancestor)
+	newIndexAtDepth := new(big.Int).Mod(p.indexAtDepth, newPosDepth.MaxGIndex())
 	return NewPosition(newPosDepth, newIndexAtDepth), nil
 }
 
@@ -69,11 +124,11 @@ func (p Position) IndexAtDepth() *big.Int {
 }
 
 func (p Position) IsRootPosition() bool {
-	return p.depth == 0 && common.Big0.Cmp(p.indexAtDepth) == 0
+	return p.depth.IsRoot() && common.Big0.Cmp(p.indexAtDepth) == 0
 }
 
 func (p Position) lshIndex(amount Depth) *big.Int {
-	return new(big.Int).Lsh(p.IndexAtDepth(), uint(amount))
+	return new(big.Int).Lsh(p.IndexAtDepth(), amount.AsUint())
 }
 
 // TraceIndex calculates the what the index of the claim value would be inside the trace.
@@ -81,8 +136,8 @@ func (p Position) lshIndex(amount Depth) *big.Int {
 func (p Position) TraceIndex(maxDepth Depth) *big.Int {
 	// When we go right, we do a shift left and set the bottom bit to be 1.
 	// To do this in a single step, do all the shifts at once & or in all 1s for the bottom bits.
-	rd := maxDepth - p.depth
-	rhs := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), uint(rd)), big.NewInt(1))
+	rd := maxDepth.RelativeDepth(p.Depth())
+	rhs := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), rd.AsUint()), big.NewInt(1))
 	ti := new(big.Int).Or(p.lshIndex(rd), rhs)
 	return ti
 }
@@ -90,8 +145,8 @@ func (p Position) TraceIndex(maxDepth Depth) *big.Int {
 // move returns a new position at the left or right child.
 func (p Position) move(right bool) Position {
 	return Position{
-		depth:        p.depth + 1,
-		indexAtDepth: new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(boolToInt(right)))),
+		depth:        p.depth.OneLevelDeeper(),
+		indexAtDepth: new(big.Int).Or(p.lshIndex(NewDepth(1)), big.NewInt(int64(boolToInt(right)))),
 	}
 }
 
@@ -114,7 +169,7 @@ func (p Position) RightOf(parent Position) bool {
 // parent return a new position that is the parent of this Position.
 func (p Position) parent() Position {
 	return Position{
-		depth:        p.depth - 1,
+		depth:        p.depth.OneLevelShallower(),
 		indexAtDepth: p.parentIndexAtDepth(),
 	}
 }
@@ -134,17 +189,23 @@ func (p Position) Print(maxDepth Depth) {
 }
 
 func (p Position) ToGIndex() *big.Int {
-	return new(big.Int).Or(new(big.Int).Lsh(big.NewInt(1), uint(p.depth)), p.IndexAtDepth())
+	d64 := p.depth.AsUint64()
+	if d64 > math.MaxUint {
+		panic(fmt.Sprintf("cannot convert %d to uint", d64))
+	}
+	d := uint(d64)
+
+	return new(big.Int).Or(new(big.Int).Lsh(big.NewInt(1), d), p.IndexAtDepth())
 }
 
 // bigMSB returns the index of the most significant bit
 func bigMSB(x *big.Int) Depth {
 	if x.Cmp(big.NewInt(0)) == 0 {
-		return 0
+		return NewDepth(0)
 	}
-	out := Depth(0)
+	out := uint64(0)
 	for ; x.Cmp(big.NewInt(0)) != 0; out++ {
 		x = new(big.Int).Rsh(x, 1)
 	}
-	return out - 1
+	return NewDepth(out - 1)
 }

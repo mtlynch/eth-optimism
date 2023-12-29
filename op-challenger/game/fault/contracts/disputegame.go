@@ -234,12 +234,15 @@ func (f *disputeGameContract) decodeClaim(result *batching.CallResult, contractI
 	parentIndex := result.GetUint32(0)
 	countered := result.GetBool(1)
 	claim := result.GetHash(2)
-	position := result.GetBigInt(3)
+	position, err := types.NewPositionFromGIndex(result.GetBigInt(3))
+	if err != nil {
+		panic(err)
+	}
 	clock := result.GetBigInt(4)
 	return types.Claim{
 		ClaimData: types.ClaimData{
 			Value:    claim,
-			Position: types.NewPositionFromGIndex(position),
+			Position: position,
 		},
 		Countered:           countered,
 		Clock:               clock.Uint64(),

@@ -45,48 +45,48 @@ func TestGindexPositionConversions(t *testing.T) {
 		gindex           *big.Int
 		expectedPosition Position
 	}{
-		{bi(1), NewPosition(0, bi(0))},
+		{bi(1), mustMakeNewPosition(0, bi(0))},
 
-		{bi(2), NewPosition(1, bi(0))},
-		{bi(3), NewPosition(1, bi(1))},
+		{bi(2), mustMakeNewPosition(1, bi(0))},
+		{bi(3), mustMakeNewPosition(1, bi(1))},
 
-		{bi(4), NewPosition(2, bi(0))},
-		{bi(5), NewPosition(2, bi(1))},
-		{bi(6), NewPosition(2, bi(2))},
-		{bi(7), NewPosition(2, bi(3))},
+		{bi(4), mustMakeNewPosition(2, bi(0))},
+		{bi(5), mustMakeNewPosition(2, bi(1))},
+		{bi(6), mustMakeNewPosition(2, bi(2))},
+		{bi(7), mustMakeNewPosition(2, bi(3))},
 
-		{bi(8), NewPosition(3, bi(0))},
-		{bi(9), NewPosition(3, bi(1))},
-		{bi(10), NewPosition(3, bi(2))},
-		{bi(11), NewPosition(3, bi(3))},
-		{bi(12), NewPosition(3, bi(4))},
-		{bi(13), NewPosition(3, bi(5))},
-		{bi(14), NewPosition(3, bi(6))},
-		{bi(15), NewPosition(3, bi(7))},
+		{bi(8), mustMakeNewPosition(3, bi(0))},
+		{bi(9), mustMakeNewPosition(3, bi(1))},
+		{bi(10), mustMakeNewPosition(3, bi(2))},
+		{bi(11), mustMakeNewPosition(3, bi(3))},
+		{bi(12), mustMakeNewPosition(3, bi(4))},
+		{bi(13), mustMakeNewPosition(3, bi(5))},
+		{bi(14), mustMakeNewPosition(3, bi(6))},
+		{bi(15), mustMakeNewPosition(3, bi(7))},
 
-		{bi(16), NewPosition(4, bi(0))},
-		{bi(17), NewPosition(4, bi(1))},
-		{bi(18), NewPosition(4, bi(2))},
-		{bi(19), NewPosition(4, bi(3))},
-		{bi(20), NewPosition(4, bi(4))},
-		{bi(21), NewPosition(4, bi(5))},
-		{bi(22), NewPosition(4, bi(6))},
-		{bi(23), NewPosition(4, bi(7))},
-		{bi(24), NewPosition(4, bi(8))},
-		{bi(25), NewPosition(4, bi(9))},
-		{bi(26), NewPosition(4, bi(10))},
-		{bi(27), NewPosition(4, bi(11))},
-		{bi(28), NewPosition(4, bi(12))},
-		{bi(29), NewPosition(4, bi(13))},
-		{bi(30), NewPosition(4, bi(14))},
-		{bi(31), NewPosition(4, bi(15))},
+		{bi(16), mustMakeNewPosition(4, bi(0))},
+		{bi(17), mustMakeNewPosition(4, bi(1))},
+		{bi(18), mustMakeNewPosition(4, bi(2))},
+		{bi(19), mustMakeNewPosition(4, bi(3))},
+		{bi(20), mustMakeNewPosition(4, bi(4))},
+		{bi(21), mustMakeNewPosition(4, bi(5))},
+		{bi(22), mustMakeNewPosition(4, bi(6))},
+		{bi(23), mustMakeNewPosition(4, bi(7))},
+		{bi(24), mustMakeNewPosition(4, bi(8))},
+		{bi(25), mustMakeNewPosition(4, bi(9))},
+		{bi(26), mustMakeNewPosition(4, bi(10))},
+		{bi(27), mustMakeNewPosition(4, bi(11))},
+		{bi(28), mustMakeNewPosition(4, bi(12))},
+		{bi(29), mustMakeNewPosition(4, bi(13))},
+		{bi(30), mustMakeNewPosition(4, bi(14))},
+		{bi(31), mustMakeNewPosition(4, bi(15))},
 
-		{bi(1023), NewPosition(9, bi(511))},
-		{bi(1024), NewPosition(10, bi(0))},
+		{bi(1023), mustMakeNewPosition(9, bi(511))},
+		{bi(1024), mustMakeNewPosition(10, bi(0))},
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("convert gindex=%s to Position", test.gindex.String()), func(t *testing.T) {
-			positionActual := NewPositionFromGIndex(test.gindex)
+			positionActual := mustMakeNewPositionFromGIndex(test.gindex)
 			require.Truef(t, test.expectedPosition.Equal(positionActual), "expected position=%s, got=%s", test.expectedPosition, positionActual)
 			gindex := positionActual.ToGIndex()
 			require.Truef(t, gindex.Cmp(test.gindex) == 0, "expected gindex=%s, got=%s", test.gindex.String(), gindex.String())
@@ -128,7 +128,7 @@ func TestNewPositionRejectsInvalidPosition(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%s: depth=%d, position=%s", test.name, test.depth, test.indexAtDepth.String()), func(t *testing.T) {
-			require.Panics(t, func() { NewPosition(test.depth, test.indexAtDepth) })
+			require.Error(t, NewPosition(test.depth, test.indexAtDepth))
 		})
 	}
 }
@@ -185,7 +185,7 @@ var treeNodes = []testNodeInfo{
 
 func TestTraceIndexOfRootWithLargeDepth(t *testing.T) {
 	traceIdx := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 100), big.NewInt(1))
-	pos := NewPositionFromGIndex(big.NewInt(1))
+	pos := mustMakeNewPositionFromGIndex(big.NewInt(1))
 	actual := pos.TraceIndex(100)
 	require.Equal(t, traceIdx, actual)
 }
@@ -193,7 +193,7 @@ func TestTraceIndexOfRootWithLargeDepth(t *testing.T) {
 // TestTraceIndex creates the position & then tests the trace index function on the treeNodesMaxDepth4 data
 func TestTraceIndex(t *testing.T) {
 	for _, test := range treeNodes {
-		pos := NewPosition(test.Depth, test.IndexAtDepth)
+		pos := mustMakeNewPosition(test.Depth, test.IndexAtDepth)
 		result := pos.TraceIndex(test.MaxDepth)
 		require.Equal(t, test.TraceIndex, result)
 	}
@@ -221,8 +221,9 @@ func TestAttack(t *testing.T) {
 		{bi(15), bi(30)},
 	}
 	for _, test := range tests {
-		pos := NewPositionFromGIndex(test.startGIndex)
-		result := pos.Attack()
+		pos := mustMakeNewPositionFromGIndex(test.startGIndex)
+		result, err := pos.Attack()
+		require.NoError(t, err)
 		require.Zerof(t, test.attackGIndex.Cmp(result.ToGIndex()), "attacking GIndex %s, expected=%s, got=%s", test.startGIndex, test.attackGIndex, result.ToGIndex())
 	}
 }
@@ -241,15 +242,16 @@ func TestDefend(t *testing.T) {
 		{bi(14), bi(30)},
 	}
 	for _, test := range tests {
-		pos := NewPositionFromGIndex(test.startGIndex)
-		result := pos.Defend()
+		pos := mustMakeNewPositionFromGIndex(test.startGIndex)
+		result, err := pos.Defend()
+		require.NoError(t, err)
 		require.Zerof(t, test.defendGIndex.Cmp(result.ToGIndex()), "defending GIndex %s, expected=%s, got=%s", test.startGIndex, test.defendGIndex, result.ToGIndex())
 	}
 }
 
 func TestRelativeToAncestorAtDepth(t *testing.T) {
 	t.Run("ErrorsForDeepAncestor", func(t *testing.T) {
-		pos := NewPosition(1, big.NewInt(1))
+		pos := mustMakeNewPosition(1, big.NewInt(1))
 		_, err := pos.RelativeToAncestorAtDepth(2)
 		require.ErrorIs(t, err, ErrPositionDepthTooSmall)
 	})
@@ -315,8 +317,8 @@ func TestRelativeToAncestorAtDepth(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(fmt.Sprintf("From %v SplitAt %v", test.gindex, test.newRootDepth), func(t *testing.T) {
-			pos := NewPositionFromGIndex(big.NewInt(test.gindex))
-			expectedRelativePosition := NewPositionFromGIndex(big.NewInt(test.expectedGIndex))
+			pos := mustMakeNewPositionFromGIndex(big.NewInt(test.gindex))
+			expectedRelativePosition := mustMakeNewPositionFromGIndex(big.NewInt(test.expectedGIndex))
 			relativePosition, err := pos.RelativeToAncestorAtDepth(test.newRootDepth)
 			require.NoError(t, err)
 			require.Equal(t, expectedRelativePosition.ToGIndex(), relativePosition.ToGIndex())
@@ -328,31 +330,71 @@ func TestRelativeMoves(t *testing.T) {
 	tests := []func(pos Position) Position{
 		func(pos Position) Position {
 			log.Printf("attacking %s", pos) // DEBUG
-			return pos.Attack()
+			p, err := pos.Attack()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 		func(pos Position) Position {
 			log.Printf("defending %s", pos) // DEBUG
-			return pos.Defend()
+			p, err := pos.Defend()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 		func(pos Position) Position {
 			log.Printf("attack, attacking %s", pos) // DEBUG
-			return pos.Attack().Attack()
+			p, err := pos.Attack()
+			if err != nil {
+				panic(err)
+			}
+			p, err = pos.Attack()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 		func(pos Position) Position {
-			return pos.Defend().Defend()
+			p, err := pos.Defend()
+			if err != nil {
+				panic(err)
+			}
+			p, err = pos.Defend()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 		func(pos Position) Position {
-			return pos.Attack().Defend()
+			p, err := pos.Attack()
+			if err != nil {
+				panic(err)
+			}
+			p, err = pos.Defend()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 		func(pos Position) Position {
-			return pos.Defend().Attack()
+			p, err := pos.Defend()
+			if err != nil {
+				panic(err)
+			}
+			p, err = p.Attack()
+			if err != nil {
+				panic(err)
+			}
+			return p
 		},
 	}
 	for i, test := range tests {
 		test := test
 		t.Run("", func(t *testing.T) {
-			expectedRelativePosition := test(NewPositionFromGIndex(big.NewInt(2)))
-			relative := NewPositionFromGIndex(big.NewInt(5))
+			expectedRelativePosition := test(mustMakeNewPositionFromGIndex(big.NewInt(2)))
+			relative := mustMakeNewPositionFromGIndex(big.NewInt(5))
 			start := test(relative)
 			relativePosition, err := start.RelativeToAncestorAtDepth(uint64(relative.Depth()))
 			require.NoError(t, err)

@@ -55,7 +55,11 @@ func (ap *AlphabetTraceProvider) GetStepData(ctx context.Context, i types.Positi
 	}
 	// We extend the deepest hash to the maximum depth if the trace is not expansive.
 	if traceIndex.Cmp(big.NewInt(int64(len(ap.state)))) >= 0 {
-		return ap.GetStepData(ctx, types.NewPosition(int(ap.depth), big.NewInt(int64(len(ap.state)))))
+		pos, err := types.NewPosition(int(ap.depth), big.NewInt(int64(len(ap.state))))
+		if err != nil {
+			return common.Hash{}, err
+		}
+		return ap.GetStepData(ctx, pos)
 	}
 	key := preimage.LocalIndexKey(L2ClaimBlockNumberLocalIndex).PreimageKey()
 	preimageData := types.NewPreimageOracleData(key[:], nil, 0)
@@ -69,7 +73,10 @@ func (ap *AlphabetTraceProvider) Get(ctx context.Context, i types.Position) (com
 	}
 	// Step data returns the pre-state, so add 1 to get the state for index i
 	ti := i.TraceIndex(int(ap.depth))
-	postPosition := types.NewPosition(int(ap.depth), new(big.Int).Add(ti, big.NewInt(1)))
+	postPosition, err := types.NewPosition(int(ap.depth), new(big.Int).Add(ti, big.NewInt(1)))
+	if err != nil {
+		return common.Hash{}, err
+	}
 	claimBytes, _, _, err := ap.GetStepData(ctx, postPosition)
 	if err != nil {
 		return common.Hash{}, err

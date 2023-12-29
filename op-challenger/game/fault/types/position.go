@@ -19,25 +19,25 @@ type Position struct {
 	indexAtDepth *big.Int
 }
 
-func NewPosition(depth int, indexAtDepth *big.Int) Position {
+func NewPosition(depth int, indexAtDepth *big.Int) (Position, error) {
 	log.Printf("creating new position with depth=%d, index=%s", depth, indexAtDepth) // DEBUG
 	if depth < 0 {
-		panic(fmt.Sprintf("position depth must be non-negative, got %d", depth))
+		return Position{}, fmt.Errorf("position depth must be non-negative, got %d", depth)
 	}
 	if indexAtDepth == nil || indexAtDepth.Cmp(common.Big0) < 0 {
-		panic(fmt.Sprintf("invalid indexAtDepth for position, got %s", indexAtDepth))
+		return Position{}, fmt.Errorf("invalid indexAtDepth for position, got %s", indexAtDepth)
 	}
 	bigDepth := big.NewInt(int64(depth))
 	depthToPowerOfTwo := bigDepth.Exp(big.NewInt(2), bigDepth, nil)
 	maxIndex := depthToPowerOfTwo.Sub(depthToPowerOfTwo, big.NewInt(1))
 	if indexAtDepth.Cmp(maxIndex) > 0 {
-		panic(fmt.Sprintf("for depth of %d, expected maximum index of %s for position, got %s", depth, maxIndex, indexAtDepth))
+		return Position{}, fmt.Errorf("for depth of %d, expected maximum index of %s for position, got %s", depth, maxIndex, indexAtDepth)
 	}
 
 	return Position{
 		depth:        depth,
 		indexAtDepth: indexAtDepth,
-	}
+	}, nil
 }
 
 // NewPositionFromGIndex creates a new Position given a generalized index,
@@ -50,7 +50,7 @@ func NewPosition(depth int, indexAtDepth *big.Int) Position {
 //		4   5 6   7
 //
 // See ../../../../specs/fault-dispute-game.md#game-tree
-func NewPositionFromGIndex(x *big.Int) Position {
+func NewPositionFromGIndex(x *big.Int) (Position, error) {
 	depth := bigMSB(x)
 	withoutMSB := new(big.Int).Not(new(big.Int).Lsh(big.NewInt(1), uint(depth)))
 	indexAtDepth := new(big.Int).And(x, withoutMSB)
@@ -65,13 +65,13 @@ func (p Position) String() string {
 	return fmt.Sprintf("Position(depth: %v, indexAtDepth: %v)", p.depth, p.indexAtDepth)
 }
 
-func (p Position) LeftChild() Position {
+func (p Position) LeftChild() (Position, error) {
 	log.Printf("getting left child of %s", p)                                           // DEBUG
 	log.Printf("new index is %s", new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(0)))) // DEBUG
 	return NewPosition(p.depth+1, new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(0))))
 }
 
-func (p Position) RightChild() Position {
+func (p Position) RightChild() (Position, error) {
 	return NewPosition(p.depth+1, new(big.Int).Or(p.lshIndex(1), big.NewInt(int64(1))))
 }
 
@@ -85,7 +85,7 @@ func (p Position) RelativeToAncestorAtDepth(ancestor uint64) (Position, error) {
 	nodesAtDepth := 1 << newPosDepth
 	newIndexAtDepth := new(big.Int).Mod(p.indexAtDepth, big.NewInt(int64(nodesAtDepth)))
 	log.Printf("relative to %s, creating new position at depth %d with depth %d and index %s", p, ancestor, newPosDepth, newIndexAtDepth)
-	return NewPosition(int(newPosDepth), newIndexAtDepth), nil
+	return NewPosition(int(newPosDepth), newIndexAtDepth)
 }
 
 func (p Position) Depth() int {
@@ -124,18 +124,26 @@ func (p Position) RightOf(parent Position) bool {
 }
 
 // parent return a new position that is the parent of this Position.
-func (p Position) parent() Position {
+func (p Position) parent() (Position, error) {
 	return NewPosition(p.depth-1, p.parentIndexAtDepth())
 }
 
 // Attack creates a new position which is the attack position of this one.
-func (p Position) Attack() Position {
+func (p Position) Attack() (Position, error) {
 	return p.LeftChild()
 }
 
 // Defend creates a new position which is the defend position of this one.
-func (p Position) Defend() Position {
-	return p.parent().RightChild().LeftChild()
+func (p Position) Defend() (Position, error) {
+	parent, err := p.parent()
+	if err != nil {
+		return Position{}, err
+	}
+	rc, err := parent.RightChild()
+	if err != nil {
+		return Position{}, err
+	}
+	return rc.LeftChild()
 }
 
 func (p Position) Print(maxDepth int) {

@@ -16,14 +16,14 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	root := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x000000000000000000000000000000000000000000000000000000000000077a"),
-			Position: NewPosition(0, common.Big0),
+			Position: mustMakeNewPosition(0, common.Big0),
 		},
 		// Root claim has no parent
 	}
 	top := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000364"),
-			Position: NewPosition(1, common.Big0),
+			Position: mustMakeNewPosition(1, common.Big0),
 		},
 		ContractIndex:       1,
 		ParentContractIndex: 0,
@@ -31,7 +31,7 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	middle := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000578"),
-			Position: NewPosition(2, big.NewInt(2)),
+			Position: mustMakeNewPosition(2, big.NewInt(2)),
 		},
 		ContractIndex:       2,
 		ParentContractIndex: 1,
@@ -40,7 +40,7 @@ func createTestClaims() (Claim, Claim, Claim, Claim) {
 	bottom := Claim{
 		ClaimData: ClaimData{
 			Value:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000465"),
-			Position: NewPosition(3, big.NewInt(4)),
+			Position: mustMakeNewPosition(3, big.NewInt(4)),
 		},
 		ContractIndex:       3,
 		ParentContractIndex: 2,
@@ -146,4 +146,20 @@ func buildGameWithClaim(claimGIndex *big.Int, parentGIndex *big.Int) *gameState 
 		ParentContractIndex: 0,
 	}
 	return NewGameState([]Claim{parentClaim, claim}, testMaxDepth)
+}
+
+func mustMakeNewPosition(depth int, indexAtDepth *big.Int) Position {
+	pos, err := NewPosition(depth, indexAtDepth)
+	if err != nil {
+		panic(err)
+	}
+	return pos
+}
+
+func mustMakeNewPositionFromGIndex(gindex *big.Int) Position {
+	pos, err := NewPositionFromGIndex(gindex)
+	if err != nil {
+		panic(err)
+	}
+	return pos
 }
